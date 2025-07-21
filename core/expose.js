@@ -8,7 +8,7 @@ async function expose(port, name, relay) {
   const myKeys = loadOrGenerateKeys();
   const ws = setupWebSocket(relay || "ws://netgate.gh3sp.com:8080");
   let partnerPublicKey = null;
-  let socket;
+  let localSocket = null;
 
   ws.on('open', () => {
     ws.send(JSON.stringify({ type: 'register', name }));
@@ -27,11 +27,24 @@ async function expose(port, name, relay) {
           break;
         case 'publicKey':
           partnerPublicKey = new Uint8Array(Buffer.from(data.key, 'base64'));
+          // Apri la connessione TCP verso la porta locale (es. ssh)
+          localSocket = net.connect(port, '127.0.0.1', () => {
+            log(`Connesso a localhost:${port}`);
+          });
+
+          localSocket.on('data', chunk => {
+            if (!partnerPublicKey) return;
+            const enc = encrypt(chunk, partnerPublicKey, myKeys.secretKey);
+            ws.send(JSON.stringify({ type: 'secureData', data: enc.data, nonce: enc.nonce }));
+          });
+
+          localSocket.on('close', () => log('Connessione TCP locale chiusa'));
+          localSocket.on('error', err => log(`Errore socket locale: ${err.message}`));
           break;
         case 'secureData':
-          if (socket) {
+          if (localSocket) {
             const raw = decrypt(data.data, data.nonce, partnerPublicKey, myKeys.secretKey);
-            if (raw) socket.write(Buffer.from(raw));
+            if (raw) localSocket.write(Buffer.from(raw));
           }
           break;
         case 'error':
@@ -44,20 +57,7 @@ async function expose(port, name, relay) {
       console.error('[gh3netgate] Errore parsing:', e.message);
     }
   });
-
-  const server = net.createServer(s => {
-    socket = s;
-    log(`Connessione locale su porta ${port} stabilita`);
-    s.on('data', chunk => {
-      if (!partnerPublicKey) return;
-      const enc = encrypt(chunk, partnerPublicKey, myKeys.secretKey);
-      ws.send(JSON.stringify({ type: 'secureData', data: enc.data, nonce: enc.nonce }));
-    });
-
-    s.on('close', () => log('Connessione locale chiusa'));
-  });
-
-  server.listen(port, () => log(`Porta ${port} esposta come '${name}'`));
 }
+
 
 module.exports = { expose };
