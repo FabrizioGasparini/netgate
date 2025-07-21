@@ -1,0 +1,33 @@
+{
+    "name": "gh3netgate",
+    "version": "1.0.0",
+    "description": "Tunneling sicuro peer-to-peer via WebSocket relay con crittografia NaCl.",
+    "main": "cli.js",
+    "bin": {
+        "gh3netgate": "./cli.js"
+    },
+    "scripts": {
+        "start": "node cli.js",
+        "relay": "node cli.js relay",
+        "expose": "node cli.js expose",
+        "connect": "node cli.js connect"
+    },
+    "keywords": [
+        "tunnel",
+        "relay",
+        "ssh",
+        "reverse",
+        "socket",
+        "secure",
+        "peer-to-peer",
+        "node"
+    ],
+    "author": "Fabri",
+    "license": "MIT",
+    "dependencies": {
+        "tweetnacl": "^1.0.3",
+        "tweetnacl-util": "^0.15.1",
+        "ws": "^8.17.0"
+    },
+    "type": "commonjs"
+}
