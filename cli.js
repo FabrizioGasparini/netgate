@@ -17,7 +17,8 @@ const [, , command, ...args] = argv;
         console.log('❌ Uso: node cli.js expose <porta> --as <nome>');
         return;
       }
-      await expose(port, name);
+      const relay = args.includes('--relay') ? args[args.indexOf('--relay') + 1] : '';
+      await expose(port, name, relay);
       break;
     }
 

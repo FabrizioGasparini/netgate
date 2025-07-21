@@ -4,9 +4,9 @@ const { loadOrGenerateKeys } = require('./keys');
 const { encrypt, decrypt } = require('./crypto');
 const { log } = require('../utils/log');
 
-async function expose(port, name) {
+async function expose(port, name, relay) {
   const myKeys = loadOrGenerateKeys();
-  const ws = setupWebSocket('ws://localhost:8080');
+  const ws = setupWebSocket(relay || "ws://netgate.gh3sp.com:8080");
   let partnerPublicKey = null;
   let socket;
 

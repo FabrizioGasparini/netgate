@@ -5,7 +5,7 @@ const { log } = require('../utils/log');
 
 async function connect(target) {
   const myKeys = loadOrGenerateKeys();
-  const ws = setupWebSocket('ws://localhost:8080');
+  const ws = setupWebSocket('ws://netgate.gh3sp.com:8080');
   let partnerPublicKey = null;
 
   ws.on('open', () => {
