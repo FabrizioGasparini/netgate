@@ -8,7 +8,8 @@ async function connect(target, localPort = 2222) {
   const myKeys = loadOrGenerateKeys();
   const ws = setupWebSocket('ws://netgate.gh3sp.com:8080');
   let partnerPublicKey = null;
-  let tcpSocket = null;  // socket TCP locale (ssh client)
+  let tcpSocket = null;
+  let dataBuffer = [];
 
   ws.on('open', () => {
     ws.send(JSON.stringify({
@@ -33,6 +34,15 @@ async function connect(target, localPort = 2222) {
         case 'publicKey':
           partnerPublicKey = new Uint8Array(Buffer.from(data.key, 'base64'));
           log('Chiave pubblica ricevuta');
+
+          // Se avevamo dati in buffer, li inviamo ora
+          if (tcpSocket && dataBuffer.length) {
+            for (const chunk of dataBuffer) {
+              const enc = encrypt(chunk, partnerPublicKey, myKeys.secretKey);
+              ws.send(JSON.stringify({ type: 'secureData', data: enc.data, nonce: enc.nonce, target }));
+            }
+            dataBuffer = [];
+          }
           break;
         case 'secureData':
           if (!tcpSocket) {
@@ -40,7 +50,9 @@ async function connect(target, localPort = 2222) {
             return;
           }
           const raw = decrypt(data.data, data.nonce, partnerPublicKey, myKeys.secretKey);
-          if (raw) tcpSocket.write(Buffer.from(raw));
+          if (raw) {
+            tcpSocket.write(Buffer.from(raw));
+          }
           break;
         case 'error':
           console.error('[gh3netgate] Errore dal server:', data.message);
@@ -53,13 +65,17 @@ async function connect(target, localPort = 2222) {
     }
   });
 
-  // Creo un server TCP locale su localPort (es. 2222)
   const server = net.createServer(socket => {
     log(`Connessione TCP locale accettata su porta ${localPort}`);
     tcpSocket = socket;
 
     socket.on('data', chunk => {
-      if (!partnerPublicKey) return;
+      log(`Ricevuti ${chunk.length} bytes dal client TCP locale`);
+      if (!partnerPublicKey) {
+        log('Chiave partner non pronta, bufferizzo dati');
+        dataBuffer.push(chunk);
+        return;
+      }
       const enc = encrypt(chunk, partnerPublicKey, myKeys.secretKey);
       ws.send(JSON.stringify({ type: 'secureData', data: enc.data, nonce: enc.nonce, target }));
     });
@@ -67,6 +83,7 @@ async function connect(target, localPort = 2222) {
     socket.on('close', () => {
       log('Connessione TCP locale chiusa');
       tcpSocket = null;
+      dataBuffer = [];
     });
 
     socket.on('error', err => {
