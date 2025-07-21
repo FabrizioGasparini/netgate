@@ -1,10 +1,10 @@
 {
-    "name": "gh3netgate",
+    "name": "netgate",
     "version": "1.0.0",
     "description": "Tunneling sicuro peer-to-peer via WebSocket relay con crittografia NaCl.",
     "main": "cli.js",
     "bin": {
-        "gh3netgate": "./cli.js"
+        "netgate": "./cli.js"
     },
     "scripts": {
         "start": "node cli.js",
