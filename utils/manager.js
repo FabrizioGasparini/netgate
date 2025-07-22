@@ -128,7 +128,6 @@ function listTunnels() {
   if (files.length === 0) return console.log('Nessun tunnel attivo.');
 
   console.log('🌐 Tunnel attivi:');
-  console.log(files)
   for (const file of files) {
     const name = path.basename(file, '.json');
     const fullPath = path.join(PID_DIR, file);
@@ -136,6 +135,7 @@ function listTunnels() {
 
     try {
       data = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
+      console.log(data)
     } catch {
       console.log(`⚠️ File corrotto: ${file}`);
       continue;
