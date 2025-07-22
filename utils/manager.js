@@ -134,8 +134,8 @@ function listTunnels() {
     let data;
 
     try {
+      console.log(name, fullPath, fs.readFileSync(fullPath, 'utf8'))
       data = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
-      console.log(data)
     } catch {
       console.log(`⚠️ File corrotto: ${file}`);
       continue;
