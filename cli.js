@@ -29,7 +29,7 @@ const RELAY_DEFAULT = 'ws://netgate.gh3sp.com:8080';
 
     case 'connect':
       if (subcommand === 'stop') {
-        if (!args[0] || args[1]) {
+        if (!args[0] || !args[1]) {
           console.log('❌ Uso: netgate stop <nome-target> <porta-locale>');
           return;
         }
@@ -64,7 +64,7 @@ const RELAY_DEFAULT = 'ws://netgate.gh3sp.com:8080';
       console.log('  netgate expose <porta> <nome> [--relay <url>]');
       console.log('  netgate expose stop <nome>');
       console.log('  netgate connect <nome-target> <porta-locale> [--relay <url>]');
-      console.log('  netgate connect stop <nome-target>');
+      console.log('  netgate connect stop <nome-target> <porta-locale>');
       console.log('  netgate list');
       console.log('  netgate relay [porta]');
       break;

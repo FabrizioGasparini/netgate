@@ -33,7 +33,23 @@ function isProcessAlive(pid) {
   }
 }
 
-function startTunnel(scriptPath, args, name, type, port = null) {
+function isPortAvailable(port) {
+  if (!port) return;
+
+  return new Promise((resolve) => {
+    const tester = require('net').createServer()
+      .once('error', () => resolve(false))
+      .once('listening', () => {
+        tester.close(() => resolve(true));
+      })
+      .listen(port);
+  });
+}
+
+async function startTunnel(scriptPath, args, name, type, port = null) {
+  if (type == "connect" && !(await isPortAvailable(port))) {
+    console.error("⚠️ Porta occupata!")
+  };
   const file = getTunnelFile(name, type, port);
 
   if (fs.existsSync(file)) {
@@ -46,6 +62,7 @@ function startTunnel(scriptPath, args, name, type, port = null) {
       fs.unlinkSync(file); // Pulisce PID morto
     }
   }
+
 
   const child = spawn(process.execPath, [scriptPath, ...args], {
     detached: true,
