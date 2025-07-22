@@ -26,13 +26,31 @@ function startRelayServer(port = 8080) {
 
         else if (data.type === 'stopTunnel') {
           if (tunnels.has(data.name)) {
+            const tunnelInfo = tunnels.get(data.name);
             tunnels.delete(data.name);
             console.log(`[-] Tunnel fermato: ${data.name}`);
-            // Manda messaggio al client per fermare il processo se connesso
-            const clientWs = clients.get(data.name);
-            if (clientWs) clientWs.send(JSON.stringify({ type: 'stopTunnel' }));
+
+            // Chiama anche il client expose
+            const clientExpose = clients.get(data.name);
+            if (clientExpose) {
+              clientExpose.send(JSON.stringify({ type: 'stopTunnel' }));
+            }
+
+            // Ferma tutti i connect associati
+            if (tunnelInfo.connections && Array.isArray(tunnelInfo.connections)) {
+              for (const pid of tunnelInfo.connections) {
+                // Cerca i client associati (semplificato: li invia tutti indistintamente)
+                wss.clients.forEach(wsClient => {
+                  if (wsClient !== clientExpose && wsClient.readyState === WebSocket.OPEN) {
+                    wsClient.send(JSON.stringify({
+                      type: 'stopConnection',
+                      reason: `Il tunnel '${data.name}' è stato chiuso.`
+                    }));
+                  }
+                });
+              }
+            }
           }
-          
         }
 
         else if (data.type === 'stopConnection') {

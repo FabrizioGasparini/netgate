@@ -1,8 +1,14 @@
 #!/usr/bin/env node
 
 const { argv } = require('process');
-const { startTunnel, stopTunnel, listTunnels } = require('./utils/manager');
-const { stopConnection } = require('./utils/manager.js');
+const {
+  startTunnel,
+  stopTunnel,
+  stopConnection,
+  listTunnels,
+  checkTunnel,
+  checkConnection
+} = require('./utils/manager');
 
 const [, , command, subcommand, ...args] = argv;
 
@@ -10,9 +16,14 @@ const RELAY_DEFAULT = 'ws://netgate.gh3sp.com:8080';
 
 (async () => {
   switch (command) {
-    case 'expose':
+    case 'expose': {
       if (subcommand === 'stop') {
         stopTunnel(args[0]);
+        break;
+      }
+
+      if (subcommand === 'check') {
+        checkTunnel(args[0]);
         break;
       }
 
@@ -26,15 +37,24 @@ const RELAY_DEFAULT = 'ws://netgate.gh3sp.com:8080';
 
       startTunnel(require.resolve('./core/expose.js'), ["expose", port, name, relay], name, 'expose');
       break;
+    }
 
-    case 'connect':
+    case 'connect': {
       if (subcommand === 'stop') {
         if (!args[0] || !args[1]) {
-          console.log('❌ Uso: netgate stop <nome-target> <porta-locale>');
+          console.log('❌ Uso: netgate connect stop <nome-target> <porta-locale>');
           return;
         }
-
         stopConnection(args[0], args[1]);
+        break;
+      }
+
+      if (subcommand === 'check') {
+        if (!args[0] || !args[1]) {
+          console.log('❌ Uso: netgate connect check <nome-target> <porta-locale>');
+          return;
+        }
+        checkConnection(args[0], args[1]);
         break;
       }
 
@@ -49,24 +69,30 @@ const RELAY_DEFAULT = 'ws://netgate.gh3sp.com:8080';
 
       startTunnel(require.resolve('./core/connect.js'), ["connect", target, bindPort, relayC], target, 'connect', bindPort);
       break;
+    }
 
-    case 'list':
+    case 'list': {
       listTunnels();
       break;
-    
-    case 'relay':
+    }
+
+    case 'relay': {
       const relayPort = parseInt(subcommand) || 8080;
       require('./relay/server.js').startRelayServer(relayPort);
       break;
+    }
 
-    default:
+    default: {
       console.log('Comandi disponibili:');
       console.log('  netgate expose <porta> <nome> [--relay <url>]');
       console.log('  netgate expose stop <nome>');
+      console.log('  netgate expose check <nome>');
       console.log('  netgate connect <nome-target> <porta-locale> [--relay <url>]');
       console.log('  netgate connect stop <nome-target> <porta-locale>');
+      console.log('  netgate connect check <nome-target> <porta-locale>');
       console.log('  netgate list');
       console.log('  netgate relay [porta]');
       break;
+    }
   }
 })();
