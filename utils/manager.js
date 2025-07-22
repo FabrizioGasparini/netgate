@@ -14,8 +14,14 @@ function sanitizeFileName(name) {
     .slice(0, 255);
 }
 
-function getTunnelFile(name, connect = false) {
-  return path.join(PID_DIR, `${connect ? "connect-" : ""}${sanitizeFileName(name)}.json`);
+function getTunnelFile(name, type = 'expose', port = null) {
+  let filename = sanitizeFileName(name);
+  if (type === 'connect' && port !== null) {
+    filename = `connect-${filename}-${port}`;
+  } else if (type === 'expose') {
+    filename = `expose-${filename}`;
+  }
+  return path.join(PID_DIR, `${filename}.json`);
 }
 
 function isProcessAlive(pid) {
@@ -28,97 +34,83 @@ function isProcessAlive(pid) {
 }
 
 function startTunnel(scriptPath, args, name, type, port = null) {
-  const file = getTunnelFile(name);
-  let data = null;
+  const file = getTunnelFile(name, type, port);
 
-  // Se è un expose
-  if (type === 'expose') {
-    if (fs.existsSync(file)) {
-      data = JSON.parse(fs.readFileSync(file, 'utf8'));
-      if (isProcessAlive(data.pid)) {
-        console.log(`⚠️ Tunnel '${name}' [expose] è già attivo (PID ${data.pid})`);
-        return;
-      } else {
-        fs.unlinkSync(file); // Cleanup vecchio
-      }
+  if (fs.existsSync(file)) {
+    const existing = JSON.parse(fs.readFileSync(file, 'utf8'));
+    if (isProcessAlive(existing.pid)) {
+      const label = type === 'connect' ? `porta ${port}` : '';
+      console.log(`⚠️ Tunnel '${name}' [${type}] ${label} è già attivo (PID ${existing.pid})`);
+      return;
+    } else {
+      fs.unlinkSync(file); // Pulisce PID morto
     }
-
-    const child = spawn(process.execPath, [scriptPath, ...args], {
-      detached: true,
-      stdio: 'ignore',
-    });
-
-    child.unref();
-
-    const tunnelData = {
-      pid: child.pid,
-      type: 'expose',
-      connections: [],
-    };
-
-    fs.writeFileSync(file, JSON.stringify(tunnelData, null, 2));
-    console.log(`🚀 Tunnel '${name}' [expose] avviato (PID ${child.pid})`);
   }
 
-  // Se è un connect
-  else if (type === 'connect') {
-    /*if (!fs.existsSync(file)) {
-      console.log(`❌ Nessun tunnel 'expose' attivo con nome '${name}'`);
-      return;
-    }
+  const child = spawn(process.execPath, [scriptPath, ...args], {
+    detached: true,
+    stdio: 'ignore',
+  });
 
-    data = JSON.parse(fs.readFileSync(file, 'utf8'));
-    if (data.type !== 'expose' || !isProcessAlive(data.pid)) {
-      console.log(`❌ Tunnel '${name}' non è un 'expose' attivo.`);
-      return;
-    }
+  child.unref();
 
-    // Controlla se la porta è già usata
-    if (data.connections.some(conn => conn.port === port)) {
-      console.log(`⚠️ La porta ${port} è già usata per il tunnel '${name}'.`);
-      return;
-    }*/
+  const tunnelData = {
+    pid: child.pid,
+    type,
+    ...(port ? { port } : {})
+  };
 
-    const child = spawn(process.execPath, [scriptPath, ...args], {
-      detached: true,
-      stdio: 'ignore',
-    });
+  fs.writeFileSync(file, JSON.stringify(tunnelData, null, 2));
 
-    child.unref();
+  const label = type === 'connect'
+    ? `🔗 Connessione a '${name}' effettuata sulla porta ${port}`
+    : `🚀 Tunnel '${name}' esposto`;
 
-    //data.connections.push({ pid: child.pid, port });
-    fs.writeFileSync(file, JSON.stringify(data, null, 2));
-    console.log(`🔗 Connessione a '${name}' effettuata sulla porta ${port} (PID ${child.pid})`);
-  }
+  console.log(`${label} (PID ${child.pid})`);
 }
 
 function stopTunnel(name) {
-  const file = getTunnelFile(name);
+  const file = getTunnelFile(name, 'expose');
   if (!fs.existsSync(file)) {
-    console.log(`❌ Nessun tunnel attivo con nome '${name}'`);
+    console.log(`❌ Nessun tunnel expose con nome '${name}'`);
     return;
   }
 
   const data = JSON.parse(fs.readFileSync(file, 'utf8'));
-
-  // Stop expose
   if (isProcessAlive(data.pid)) {
     try {
       process.kill(data.pid);
-    } catch { }
-  }
-
-  // Stop connects
-  for (const conn of data.connections) {
-    if (isProcessAlive(conn.pid)) {
-      try {
-        process.kill(conn.pid);
-      } catch { }
+      console.log(`🛑 Tunnel expose '${name}' terminato (PID ${data.pid})`);
+    } catch (err) {
+      console.error(`⚠️ Errore nel terminare '${name}': ${err.message}`);
     }
+  } else {
+    console.log(`⚠️ Processo expose '${name}' già terminato`);
   }
 
   fs.unlinkSync(file);
-  console.log(`🛑 Tunnel '${name}' arrestato e tutte le connessioni chiuse.`);
+}
+
+function stopConnection(name, port) {
+  const file = getTunnelFile(name, 'connect', port);
+  if (!fs.existsSync(file)) {
+    console.log(`❌ Nessuna connessione '${name}' sulla porta ${port}`);
+    return;
+  }
+
+  const data = JSON.parse(fs.readFileSync(file, 'utf8'));
+  if (isProcessAlive(data.pid)) {
+    try {
+      process.kill(data.pid);
+      console.log(`🛑 Connessione '${name}' su porta ${port} terminata (PID ${data.pid})`);
+    } catch (err) {
+      console.error(`⚠️ Errore nel terminare la connessione: ${err.message}`);
+    }
+  } else {
+    console.log(`⚠️ Processo connessione '${name}' su porta ${port} già terminato`);
+  }
+
+  fs.unlinkSync(file);
 }
 
 function listTunnels() {
@@ -129,68 +121,26 @@ function listTunnels() {
 
   console.log('🌐 Tunnel attivi:');
   for (const file of files) {
-    const name = path.basename(file, '.json');
     const fullPath = path.join(PID_DIR, file);
     let data;
 
     try {
-      console.log(name, fullPath, fs.readFileSync(fullPath, { encoding: 'utf8', flag: 'r' }))
       data = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
     } catch {
       console.log(`⚠️ File corrotto: ${file}`);
       continue;
     }
 
-    const exposeAlive = isProcessAlive(data.pid);
-    const exposeStatus = exposeAlive ? '' : '⚠️ non attivo';
+    const alive = isProcessAlive(data.pid);
+    const icon = alive ? '✅' : '❌';
+    const label = data.type === 'connect'
+      ? `📥 connect → ${data.port}`
+      : '📤 expose';
 
-    console.log(`📤 ${name} [expose] (PID ${data.pid}) ${exposeStatus}`);
-
-    for (const conn of data.connections) {
-      const alive = isProcessAlive(conn.pid);
-      const icon = alive ? '📥' : '⚠️';
-      const info = alive ? `(PID ${conn.pid})` : '(non attivo)';
-      console.log(`   └── ${icon} Porta ${conn.port} ${info}`);
-    }
+    const name = path.basename(file, '.json').replace(/^connect-/, '').replace(/^expose-/, '');
+    console.log(`- ${label} '${name}' (PID ${data.pid}) ${icon}`);
   }
 }
-
-function stopConnection(name, port) {
-  const filePath = getTunnelFile(name, true);
-  if (!fs.existsSync(filePath)) {
-    console.log(`❌ Nessun tunnel '${name}' trovato.`);
-    return;
-  }
-
-  try {
-    const data = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    if (data.type !== 'expose') {
-      console.log(`⚠️ Il tunnel '${name}' non è di tipo 'expose'.`);
-      return;
-    }
-
-    const connections = data.connections || [];
-    const index = connections.findIndex(c => c.port === port);
-    if (index !== -1) {
-      const conn = connections[index];
-      try {
-        process.kill(conn.pid);
-        connections.splice(index, 1);
-        fs.writeFileSync(filePath, JSON.stringify({ ...data, connections }, null, 2));
-        console.log(`❌ Connessione sulla porta ${port} terminata (PID ${conn.pid})`);
-        return;
-      } catch (err) {
-        console.error(`⚠️ Errore nel terminare la connessione su porta ${port}: ${err.message}`);
-        return;
-      }
-    } else {
-      console.log(`🔍 Nessuna connessione trovata sulla porta ${port} per il tunnel '${name}'`);
-    }
-  } catch (err) {
-    console.error(`⚠️ Errore nel leggere il file PID per '${name}': ${err.message}`);
-  }
-}
-
 
 module.exports = {
   startTunnel,
