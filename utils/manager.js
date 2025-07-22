@@ -121,25 +121,38 @@ function listTunnels() {
 
   console.log('🌐 Tunnel attivi:');
   for (const file of files) {
-    const fullPath = path.join(PID_DIR, file);
-    let data;
+  const fullPath = path.join(PID_DIR, file);
+  let data;
 
-    try {
-      data = JSON.parse(fs.readFileSync(fullPath, 'utf8'));
-    } catch {
-      console.log(`⚠️ File corrotto: ${file}`);
+  try {
+    const content = fs.readFileSync(fullPath, 'utf8');
+    if (!content.trim()) {
+      console.log(`⚠️ File vuoto: ${file}`);
       continue;
     }
 
-    const alive = isProcessAlive(data.pid);
-    const icon = alive ? '✅' : '❌';
-    const label = data.type === 'connect'
-      ? `📥 connect → ${data.port}`
-      : '📤 expose';
-
-    const name = path.basename(file, '.json').replace(/^connect-/, '').replace(/^expose-/, '');
-    console.log(`- ${label} '${name}' (PID ${data.pid}) ${icon}`);
+    data = JSON.parse(content);
+    if (!data || typeof data.pid !== 'number') {
+      console.log(`⚠️ File invalido o mancante PID: ${file}`);
+      continue;
+    }
+  } catch (err) {
+    console.log(`⚠️ Errore nel parsing JSON (${file}): ${err.message}`);
+    continue;
   }
+
+  const alive = isProcessAlive(data.pid);
+  const icon = alive ? '✅' : '❌';
+  const label = data.type === 'connect'
+    ? `📥 connect → ${data.port}`
+    : '📤 expose';
+
+  const name = path.basename(file, '.json')
+    .replace(/^connect-/, '')
+    .replace(/^expose-/, '');
+
+  console.log(`- ${label} '${name}' (PID ${data.pid}) ${icon}`);
+}
 }
 
 module.exports = {
