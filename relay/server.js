@@ -7,29 +7,32 @@ function startRelayServer(port = 8080) {
   console.log(`[📡] Relay server in ascolto su porta ${port}`);
 
   wss.on('connection', ws => {
-    ws.on('message', msg => {
+    ws.on('message', raw => {
       try {
-        const data = JSON.parse(msg);
+        const data = JSON.parse(raw);
 
         if (data.type === 'register') {
           ws.name = data.name;
-          clients.set(data.name, ws);
+          clients.set(ws.name, ws);
           console.log(`[+] Registrato: ${data.name}`);
         }
 
-        if (data.type === 'connect') {
+        else if (data.type === 'connect') {
           const target = clients.get(data.target);
           if (target) {
             ws.partner = target;
             target.partner = ws;
             target.send(JSON.stringify({ type: 'incoming', from: data.from }));
+            console.log(`[→] Connessione richiesta da ${data.from} a ${data.target}`);
           } else {
             ws.send(JSON.stringify({ type: 'error', message: 'target not found' }));
+            console.log(`[✘] Target '${data.target}' non trovato`);
           }
         }
 
-        if (ws.partner) {
-          ws.partner.send(msg); // inoltro diretto del messaggio
+        // 🔁 Inoltro dei messaggi solo se c'è un partner
+        else if (ws.partner) {
+          ws.partner.send(raw);
         }
 
       } catch (e) {

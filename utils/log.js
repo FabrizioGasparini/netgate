@@ -1,5 +1,5 @@
 function log(...args) {
-  console.log('[gh3netgate]', ...args);
+  console.log('[netgate]', ...args);
 }
 
 module.exports = { log };

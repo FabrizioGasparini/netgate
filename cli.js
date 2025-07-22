@@ -24,11 +24,15 @@ const [, , command, ...args] = argv;
 
     case 'connect': {
       const target = args[0];
+      const bindIndex = args.indexOf('--bind');
+      const bindPort = bindIndex !== -1 ? parseInt(args[bindIndex + 1]) : null;
+      const relay = args.includes('--relay') ? args[args.indexOf('--relay') + 1] : '';
       if (!target) {
-        console.log('❌ Uso: node cli.js connect <nome-target>');
+        console.log('❌ Uso: node cli.js connect <nome-target> [--bind <porta-locale>]');
         return;
       }
-      await connect(target);
+
+      await connect(target, bindPort, relay);
       break;
     }
 
