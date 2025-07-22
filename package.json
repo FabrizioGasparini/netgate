@@ -13,7 +13,8 @@
         "connect": "node cli.js connect",
         "build:linux": "pkg . --targets node18-linux --output build/netgate-linux",
         "build:windows": "pkg . --targets node18-win --output build/netgate-win.exe",
-        "build": "npm run build:linux & npm run build:windows"
+        "build": "npm run build:linux & npm run build:windows",
+        "git": "git add . & git commit -m 'Update' & git push"
     },
     "keywords": [
         "tunnel",
