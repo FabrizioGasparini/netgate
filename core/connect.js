@@ -3,6 +3,7 @@ const { setupWebSocket } = require('./websocket');
 const { loadOrGenerateKeys } = require('./keys');
 const { log } = require('../utils/log');
 const nacl = require('tweetnacl');
+const { argv } = require('process');
 
 async function connect(target, bindPort = null, relayUrl = 'ws://netgate.gh3sp.com:8080') {
   const myKeys = loadOrGenerateKeys();
@@ -126,5 +127,24 @@ async function connect(target, bindPort = null, relayUrl = 'ws://netgate.gh3sp.c
     });
   }
 }
+
+if (require.main === module) {
+  const [, , command, ...args] = process.argv;
+
+  if (command === 'connect') {
+    const target = args[0];
+    const bindPort = args[1] ? parseInt(args[1]) : null;
+    const relayUrl = args[2] || 'ws://netgate.gh3sp.com:8080';
+
+    connect(target, bindPort, relayUrl).catch(err => {
+      console.error('Errore in connect:', err);
+      process.exit(1);
+    });
+  } else {
+    console.error('Comando non riconosciuto o mancante');
+    process.exit(1);
+  }
+}
+
 
 module.exports = { connect };

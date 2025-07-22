@@ -1,79 +1,72 @@
 #!/usr/bin/env node
 
 const { argv } = require('process');
-const { expose } = require('./core/expose');
-const { connect } = require('./core/connect');
-const { startRelayServer } = require('./relay/server');
-const { log } = require('./utils/log');
+const { startTunnel, stopTunnel, listTunnels } = require('./utils/manager');
+const { stopConnection } = require('./utils/manager.js');
 
-const [, , command, ...args] = argv;
+const [, , command, subcommand, ...args] = argv;
 
-const usage = () => {
-  console.log('\n🌐  Gh3NetGate - Remote Secure Tunnel');
-  console.log('-----------------------------------');
-  console.log('📦 Comandi disponibili:');
-  console.log('');
-  console.log('🔓  expose <porta-locale> <nome> [--relay <url>]');
-  console.log('     ↪ Espone una porta locale su Internet, accessibile da altri client.');
-  console.log('');
-  console.log('🔗  connect <nome-target> <porta-locale> [--relay <url>]');
-  console.log('     ↪ Si connette a un server esposto con il nome specificato.');
-  console.log('');
-  console.log('📡  relay [porta]');
-  console.log('     ↪ Avvia il server relay WebSocket sulla porta specificata (default: 8080).\n');
-  console.log('');
-  console.log('ℹ️  Esempio:');
-  console.log('     netgate expose 22 fabri --relay ws://netgate.gh3sp.com:8080');
-  console.log('     netgate connect fabri 2222');
-  console.log('     netgate relay 1234\n');
-  console.log('');
-};
+const RELAY_DEFAULT = 'ws://netgate.gh3sp.com:8080';
 
 (async () => {
   switch (command) {
-    case 'expose': {
-      const port = parseInt(args[0]);
-      const name = args[1] || `srv-${Date.now().toString(36)}`;
-      const relay = args.includes('--relay') ? args[args.indexOf('--relay') + 1] : 'ws://netgate.gh3sp.com:8080';
+    case 'expose':
+      if (subcommand === 'stop') {
+        stopTunnel(args[0]);
+        break;
+      }
 
-      if (!port) {
-        console.log('❌ Errore: devi specificare una porta da esporre.');
-        usage();
+      const port = parseInt(subcommand);
+      const name = args[0];
+      const relay = args.includes('--relay') ? args[args.indexOf('--relay') + 1] : RELAY_DEFAULT;
+      if (!port || !name) {
+        console.log('❌ Uso: netgate expose <porta> <nome> [--relay <url>]');
         return;
       }
 
-      log(`🚪 Espongo la porta ${port} come '${name}'`);
-      log(`🔁 Relay usato: ${relay}`);
-      await expose(port, name, relay);
+      startTunnel(require.resolve('./core/expose.js'), ["expose", port, name, relay], name, 'expose');
       break;
-    }
 
-    case 'connect': {
-      const target = args[0];
-      const bindPort = parseInt(args[1]);
-      const relay = args.includes('--relay') ? args[args.indexOf('--relay') + 1] : 'ws://netgate.gh3sp.com:8080';
+    case 'connect':
+      if (subcommand === 'stop') {
+        if (!args[0] || args[1]) {
+          console.log('❌ Uso: netgate stop <nome-target> <porta-locale>');
+          return;
+        }
+
+        stopConnection(args[0], args[1]);
+        break;
+      }
+
+      const target = subcommand;
+      const bindPort = parseInt(args[0]);
+      const relayC = args.includes('--relay') ? args[args.indexOf('--relay') + 1] : RELAY_DEFAULT;
 
       if (!target || !bindPort) {
-        console.log('❌ Errore: devi specificare un target e una porta di bind.');
-        usage();
+        console.log('❌ Uso: netgate connect <nome-target> <porta-locale> [--relay <url>]');
         return;
       }
 
-      log(`🔗 Mi connetto al target '${target}' e inoltro su porta locale ${bindPort}`);
-      log(`🔁 Relay usato: ${relay}`);
-      await connect(target, bindPort, relay);
+      startTunnel(require.resolve('./core/connect.js'), ["connect", target, bindPort, relayC], target, 'connect', bindPort);
       break;
-    }
 
-    case 'relay': {
-      const relayPort = parseInt(args[0]) || 8080;
-      log(`📡 Avvio del server relay WebSocket sulla porta ${relayPort}`);
-      startRelayServer(relayPort);
+    case 'list':
+      listTunnels();
       break;
-    }
+    
+    case 'relay':
+      const relayPort = parseInt(subcommand) || 8080;
+      require('./relay/server.js').startRelayServer(relayPort);
+      break;
 
     default:
-      usage();
+      console.log('Comandi disponibili:');
+      console.log('  netgate expose <porta> <nome> [--relay <url>]');
+      console.log('  netgate expose stop <nome>');
+      console.log('  netgate connect <nome-target> <porta-locale> [--relay <url>]');
+      console.log('  netgate connect stop <nome-target>');
+      console.log('  netgate list');
+      console.log('  netgate relay [porta]');
       break;
   }
 })();

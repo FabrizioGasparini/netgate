@@ -3,6 +3,9 @@ const { setupWebSocket } = require('./websocket');
 const { loadOrGenerateKeys } = require('./keys');
 const { log } = require('../utils/log');
 const nacl = require('tweetnacl');
+const { argv } = require('process');
+
+const [, , command, ...args] = argv;
 
 async function expose(port, name, relayUrl = 'ws://netgate.gh3sp.com:8080') {
   const myKeys = loadOrGenerateKeys();
@@ -107,4 +110,24 @@ async function expose(port, name, relayUrl = 'ws://netgate.gh3sp.com:8080') {
   });
 }
 
+if (require.main === module) {  // Se eseguito direttamente da node
+  const [, , command, ...args] = process.argv;
+
+  if (command === 'expose') {
+    // Assumiamo args: port, name, relayUrl (opzionale)
+    const port = parseInt(args[0]);
+    const name = args[1];
+    const relayUrl = args[2] || 'ws://netgate.gh3sp.com:8080';
+
+    expose(port, name, relayUrl).catch(err => {
+      console.error('Errore in expose:', err);
+      process.exit(1);
+    });
+  } else {
+    console.error('Comando non riconosciuto o mancante');
+    process.exit(1);
+  }
+}
+
 module.exports = { expose };
+

@@ -28,6 +28,7 @@
     "author": "Fabri",
     "license": "MIT",
     "dependencies": {
+        "blessed": "^0.1.81",
         "pkg": "^5.8.1",
         "tweetnacl": "^1.0.3",
         "tweetnacl-util": "^0.15.1",
