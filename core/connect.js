@@ -3,7 +3,6 @@ const { setupWebSocket } = require('./websocket');
 const { loadOrGenerateKeys } = require('./keys');
 const { log } = require('../utils/log');
 const nacl = require('tweetnacl');
-const { argv } = require('process');
 
 async function connect(target, bindPort = null, relayUrl = 'ws://netgate.gh3sp.com:8080') {
   const myKeys = loadOrGenerateKeys();
@@ -17,7 +16,8 @@ async function connect(target, bindPort = null, relayUrl = 'ws://netgate.gh3sp.c
     ws.send(JSON.stringify({
       type: 'connect',
       target,
-      from: 'client-' + Date.now()
+      from: 'client-' + Date.now(),
+      pid: process.pid
     }));
     log(`Richiesta connessione a '${target}' inviata`);
   });
@@ -76,8 +76,6 @@ async function connect(target, bindPort = null, relayUrl = 'ws://netgate.gh3sp.c
           }
           break;
 
-  
-
         case 'secureData': {
           const { socketId, data: encryptedData, nonce: nonceB64 } = data;
           if (!socketId || !tcpSockets.has(socketId)) {
@@ -100,15 +98,35 @@ async function connect(target, bindPort = null, relayUrl = 'ws://netgate.gh3sp.c
 
         case 'error':
           console.error('[connect] Errore dal server:', data.message);
+          ws.send(JSON.stringify({ type: 'stopConnection', name: target, pid: process.pid, port: bindPort }));
           break;
 
+        case 'stopConnection':
+          
+          break
+        
         default:
-          log('Messaggio sconosciuto:', data);
+          log('Messaggio sconosciuto:', pro);
       }
     } catch (e) {
       console.error('[connect] Errore parsing messaggio:', e.message);
     }
   });
+
+  ws.on('close', () => {
+    ws.send(JSON.stringify({ type: 'stopConnection', name: target, pid: process.pid, port: bindPort }));
+  })
+  ws.on('error', () => {
+    ws.send(JSON.stringify({ type: 'stopConnection', name: target, pid: process.pid, port: bindPort }));
+  })
+
+  function onShutdown() {
+    if(ws.OPEN) ws.send(JSON.stringify({ type: 'stopConnection', name: target, pid: process.pid, port: bindPort }));
+    
+    process.exit(0)
+  }
+
+  process.on('exit', onShutdown);     // qualsiasi uscita
 
   // Se non è specificata una porta di bind, fallback a stdin
   if (!bindPort) {

@@ -3,9 +3,6 @@ const { setupWebSocket } = require('./websocket');
 const { loadOrGenerateKeys } = require('./keys');
 const { log } = require('../utils/log');
 const nacl = require('tweetnacl');
-const { argv } = require('process');
-
-const [, , command, ...args] = argv;
 
 async function expose(port, name, relayUrl = 'ws://netgate.gh3sp.com:8080') {
   const myKeys = loadOrGenerateKeys();
@@ -16,7 +13,7 @@ async function expose(port, name, relayUrl = 'ws://netgate.gh3sp.com:8080') {
   const tcpSockets = new Map();
 
   ws.on('open', () => {
-    ws.send(JSON.stringify({ type: 'register', name }));
+    ws.send(JSON.stringify({ type: 'register', name, tunnelInfo: { type: 'expose', pid: process.pid, connections: [] } }));
     log(`✅ Registrato come '${name}'`);
   });
 
@@ -95,6 +92,7 @@ async function expose(port, name, relayUrl = 'ws://netgate.gh3sp.com:8080') {
 
         case 'error':
           console.error('[expose] Errore dal server relay:', data.message);
+          ws.send(JSON.stringify({ type: 'stopTunnel', name }));
           break;
 
         case 'connect':
@@ -108,7 +106,24 @@ async function expose(port, name, relayUrl = 'ws://netgate.gh3sp.com:8080') {
       console.error('[expose] Errore parsing messaggio:', e.message);
     }
   });
+
+  ws.on('close', () => {
+    ws.send(JSON.stringify({ type: 'stopTunnel', name }));
+  })
+  ws.on('error', () => {
+    ws.send(JSON.stringify({ type: 'stopTunnel', name }));
+  })
+  
+  function onShutdown() {
+    ws.send(JSON.stringify({ type: 'stopTunnel', name }));
+    process.exit(0)
+  }
+
+  process.on('SIGINT', onShutdown);   // CTRL+C
+  process.on('SIGTERM', onShutdown);  // kill PID
+  process.on('exit', onShutdown);     // qualsiasi uscita
 }
+
 
 if (require.main === module) {  // Se eseguito direttamente da node
   const [, , command, ...args] = process.argv;
