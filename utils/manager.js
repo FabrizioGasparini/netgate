@@ -48,7 +48,8 @@ function isPortAvailable(port) {
 
 async function startTunnel(scriptPath, args, name, type, port = null) {
   if (type == "connect" && !(await isPortAvailable(port))) {
-    console.error("⚠️ Porta occupata!")
+    console.error(`⚠️ La porta ${port} è occupata!`)
+    return
   };
   const file = getTunnelFile(name, type, port);
 
