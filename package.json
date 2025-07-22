@@ -25,9 +25,23 @@
     "author": "Fabri",
     "license": "MIT",
     "dependencies": {
+        "pkg": "^5.8.1",
         "tweetnacl": "^1.0.3",
         "tweetnacl-util": "^0.15.1",
         "ws": "^8.17.0"
     },
-    "type": "commonjs"
+    "type": "commonjs",
+    "pkg": {
+        "assets": [
+            "core/**/*",
+            "relay/**/*",
+            "utils/**/*"
+        ],
+        "targets": [
+            "node18-linux",
+            "node18-win",
+            "node18-macos"
+        ],
+        "outputPath": "build"
+    }
 }
