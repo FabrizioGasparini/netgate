@@ -17,7 +17,7 @@ const [, , command, ...args] = argv;
         console.log('❌ Uso: node cli.js expose <porta> --as <nome>');
         return;
       }
-      const relay = args.includes('--relay') ? args[args.indexOf('--relay') + 1] : '';
+      const relay = args.includes('--relay') ? args[args.indexOf('--relay') + 1] : undefined;
       await expose(port, name, relay);
       break;
     }
@@ -25,8 +25,8 @@ const [, , command, ...args] = argv;
     case 'connect': {
       const target = args[0];
       const bindIndex = args.indexOf('--bind');
-      const bindPort = bindIndex !== -1 ? parseInt(args[bindIndex + 1]) : null;
-      const relay = args.includes('--relay') ? args[args.indexOf('--relay') + 1] : '';
+      const bindPort = bindIndex !== -1 ? parseInt(args[bindIndex + 1]) : undefined;
+      const relay = args.includes('--relay') ? args[args.indexOf('--relay') + 1] : undefined;
       if (!target) {
         console.log('❌ Uso: node cli.js connect <nome-target> [--bind <porta-locale>]');
         return;
