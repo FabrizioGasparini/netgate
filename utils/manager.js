@@ -62,7 +62,7 @@ function startTunnel(scriptPath, args, name, type, port = null) {
 
   // Se è un connect
   else if (type === 'connect') {
-    if (!fs.existsSync(file)) {
+    /*if (!fs.existsSync(file)) {
       console.log(`❌ Nessun tunnel 'expose' attivo con nome '${name}'`);
       return;
     }
@@ -77,7 +77,7 @@ function startTunnel(scriptPath, args, name, type, port = null) {
     if (data.connections.some(conn => conn.port === port)) {
       console.log(`⚠️ La porta ${port} è già usata per il tunnel '${name}'.`);
       return;
-    }
+    }*/
 
     const child = spawn(process.execPath, [scriptPath, ...args], {
       detached: true,
@@ -87,7 +87,7 @@ function startTunnel(scriptPath, args, name, type, port = null) {
     child.unref();
 
     data.connections.push({ pid: child.pid, port });
-    fs.writeFileSync(file, JSON.stringify(data, null, 2));
+    fs.writeFileSync("connect-" + file, JSON.stringify(data, null, 2));
     console.log(`🔗 Connessione a '${name}' effettuata sulla porta ${port} (PID ${child.pid})`);
   }
 }
@@ -155,7 +155,7 @@ function listTunnels() {
 }
 
 function stopConnection(name, port) {
-  const filePath = getPidFile(name);
+  const filePath = getPidFile("connect-" + name);
   if (!fs.existsSync(filePath)) {
     console.log(`❌ Nessun tunnel '${name}' trovato.`);
     return;
