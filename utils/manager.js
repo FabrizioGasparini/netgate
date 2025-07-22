@@ -86,7 +86,7 @@ function startTunnel(scriptPath, args, name, type, port = null) {
 
     child.unref();
 
-    data.connections.push({ pid: child.pid, port });
+    //data.connections.push({ pid: child.pid, port });
     fs.writeFileSync("connect-" + file, JSON.stringify(data, null, 2));
     console.log(`🔗 Connessione a '${name}' effettuata sulla porta ${port} (PID ${child.pid})`);
   }
