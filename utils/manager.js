@@ -14,8 +14,8 @@ function sanitizeFileName(name) {
     .slice(0, 255);
 }
 
-function getTunnelFile(name) {
-  return path.join(PID_DIR, `${sanitizeFileName(name)}.json`);
+function getTunnelFile(name, connect = false) {
+  return path.join(PID_DIR, `${connect ? "connect-" : ""}${sanitizeFileName(name)}.json`);
 }
 
 function isProcessAlive(pid) {
@@ -155,7 +155,7 @@ function listTunnels() {
 }
 
 function stopConnection(name, port) {
-  const filePath = getPidFile("connect-" + name);
+  const filePath = getTunnelFile(name, true);
   if (!fs.existsSync(filePath)) {
     console.log(`❌ Nessun tunnel '${name}' trovato.`);
     return;
