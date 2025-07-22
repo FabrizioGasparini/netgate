@@ -36,7 +36,6 @@ async function connect(target, bindPort = null, relayUrl = 'ws://netgate.gh3sp.c
           log('Chiave pubblica inviata');
 
           // Se bindPort è specificato, apro un server TCP locale che inoltra i dati
-          console.log(bindPort, tcpSockets.size)
           if (bindPort && tcpSockets.size === 0) {
             const server = net.createServer(clientSocket => {
               const socketId = Date.now().toString() + Math.random().toString(36).slice(2);

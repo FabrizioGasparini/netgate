@@ -12,9 +12,9 @@ const [, , command, ...args] = argv;
   switch (command) {
     case 'expose': {
       const port = parseInt(args[0]);
-      const name = args.includes('--as') ? args[args.indexOf('--as') + 1] : '';
+      const name = args.length == 2 ? args[1] : Date.now().toString() + Math.random().toString(36).slice(2);
       if (!port || !name) {
-        console.log('❌ Uso: node cli.js expose <porta> --as <nome>');
+        console.log('❌ Uso: netgate expose <porta> <nome>');
         return;
       }
       const relay = args.includes('--relay') ? args[args.indexOf('--relay') + 1] : undefined;
@@ -24,11 +24,10 @@ const [, , command, ...args] = argv;
 
     case 'connect': {
       const target = args[0];
-      const bindIndex = args.indexOf('--bind');
-      const bindPort = bindIndex !== -1 ? parseInt(args[bindIndex + 1]) : undefined;
+      const bindPort = parseInt(args[1]);
       const relay = args.includes('--relay') ? args[args.indexOf('--relay') + 1] : undefined;
       if (!target) {
-        console.log('❌ Uso: node cli.js connect <nome-target> [--bind <porta-locale>]');
+        console.log('❌ Uso: netgate connect <nome-target> <porta-locale>');
         return;
       }
 

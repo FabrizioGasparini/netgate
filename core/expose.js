@@ -94,6 +94,9 @@ async function expose(port, name, relayUrl = 'ws://netgate.gh3sp.com:8080') {
           console.error('[expose] Errore dal server relay:', data.message);
           break;
 
+        case 'connect':
+          log('⚠️ Utente connesso:', data);
+          break;
         default:
           log('⚠️ Messaggio sconosciuto:', data);
           break;
